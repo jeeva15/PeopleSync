@@ -17,6 +17,30 @@ Tailwind CSS is used.
 - `npm start` — local development server
 - `npm run build` — production build
 - `npm test` — build and run frontend checks
+- `npm run test:e2e` — run all Playwright browser journeys
+
+## Playwright critical journeys
+
+Install Chromium once, then run the four assessment journeys:
+
+```bash
+npx playwright install chromium
+npm run test:e2e -- --grep @critical
+```
+
+Playwright starts the Vite server automatically. To test an already deployed
+frontend instead, disable the local server and provide its URL:
+
+```bash
+PLAYWRIGHT_SKIP_WEBSERVER=true \
+PLAYWRIGHT_BASE_URL=https://portal.example.com \
+npm run test:e2e -- --grep @critical
+```
+
+Each test installs an isolated in-browser API fixture, so runs are independent
+and do not modify shared backend data. HTML reports are written to
+`playwright-report/`; failure screenshots, traces, and videos are written below
+`test-results/playwright/artifacts/`.
 
 The frontend expects `VITE_API_URL`, defaulting to the same-origin `/api/v1`.
 During development, Vite proxies that path to `http://localhost:8080`; production

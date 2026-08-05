@@ -54,10 +54,10 @@ jobs:
       - name: Install Playwright Chromium and system dependencies
         run: npx playwright install --with-deps chromium
 
-      - name: Run selected Playwright smoke tests
+      - name: Run critical Playwright user journeys
         env:
           CI: "true"
-        run: npm run test:e2e -- --grep @smoke
+        run: npm run test:e2e -- --grep @critical
 
       - name: Upload frontend test and failure evidence
         if: always()

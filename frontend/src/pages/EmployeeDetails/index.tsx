@@ -66,7 +66,7 @@ export default function EmployeeDetailsPage() {
         </Link>
       </div>
       {saved && (
-        <div className="alert alert-success success-toast">
+        <div className="alert alert-success success-toast" role="status" aria-live="polite">
           Employee {saved} successfully.
         </div>
       )}

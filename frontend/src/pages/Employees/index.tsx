@@ -265,6 +265,7 @@ export default function EmployeesPage() {
                       <Link
                         to={`/employees/${employee.id}`}
                         className="employee-cell"
+                        data-testid={`employee-details-${employee.id}`}
                       >
                         <span className="employee-avatar">
                           {employee.fullName
