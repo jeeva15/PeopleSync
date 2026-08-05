@@ -25,15 +25,16 @@ jobs:
     timeout-minutes: 20
 
     services:
-      mysql:
-        image: mysql:8.4
+      postgres:
+        image: postgres:17-alpine
         env:
-          MYSQL_DATABASE: people_sync_test
-          MYSQL_ROOT_PASSWORD: ci-test-only-password
+          POSTGRES_DB: people_sync_test
+          POSTGRES_USER: people_sync_ci
+          POSTGRES_PASSWORD: ci-test-only-password
         ports:
-          - 3306:3306
+          - 5432:5432
         options: >-
-          --health-cmd="mysqladmin ping --host=127.0.0.1 --user=root --password=ci-test-only-password"
+          --health-cmd="pg_isready --username=people_sync_ci --dbname=people_sync_test"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
@@ -44,12 +45,13 @@ jobs:
         shell: bash
 
     env:
+      SPRING_PROFILES_ACTIVE: prod
       DB_HOST: 127.0.0.1
-      DB_PORT: "3306"
+      DB_PORT: "5432"
       DB_NAME: people_sync_test
-      DB_USERNAME: root
+      DB_USERNAME: people_sync_ci
       DB_PASSWORD: ci-test-only-password
-      DB_USE_SSL: "false"
+      DB_SSL_MODE: disable
 
     steps:
       - name: Check out repository
@@ -74,11 +76,11 @@ jobs:
       - name: Build executable backend artifact
         run: ./gradlew --no-daemon bootJar
 
-      - name: Run MySQL migration and API integration checks
+      - name: Run PostgreSQL production-profile migration and API integration checks
         run: |
           set -Eeuo pipefail
           mkdir -p build/ci-evidence
-          ./gradlew --no-daemon bootRun > build/ci-evidence/api.log 2>&1 &
+          ./gradlew --no-daemon bootRun --args='--spring.profiles.active=prod' > build/ci-evidence/api.log 2>&1 &
           app_pid=$!
           trap 'kill "$app_pid" 2>/dev/null || true' EXIT
 

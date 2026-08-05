@@ -7,7 +7,7 @@ on:
 
 jobs:
   deploy:
-    needs: build-and-test
+    needs: Build, test, and verify API
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Render Backend Deploy Hook
