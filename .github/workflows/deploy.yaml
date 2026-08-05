@@ -1,0 +1,19 @@
+name: CI/CD Production Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render Backend Deploy Hook
+        run: |
+          curl -X POST "${{ secrets.RENDER_BACKEND_HOOK }}"
+
+      - name: Trigger Render Frontend Deploy Hook
+        run: |
+          curl -X POST "${{ secrets.RENDER_FRONTEND_HOOK }}"
