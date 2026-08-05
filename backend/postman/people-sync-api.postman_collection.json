@@ -1,0 +1,220 @@
+{
+  "info": {
+    "_postman_id": "2dce2a8a-e4e5-4e83-baa9-8eecc98ce53e",
+    "name": "PeopleSync Employee Management API",
+    "description": "Ordered API acceptance suite for the Employee Management Portal. The suite discovers an active department, generates a unique employee email, and captures the created employee ID for later requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.environment.get('uniqueEmail')) {",
+          "  pm.environment.set('uniqueEmail', `newman.${Date.now()}@example.com`);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup - Capture active department",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": "{{baseUrl}}/departments?activeOnly=true"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "pm.test('returns active departments', () => pm.response.to.have.status(200));",
+          "const departments = pm.response.json();",
+          "pm.test('department response is a non-empty array', () => { pm.expect(departments).to.be.an('array').that.is.not.empty; });",
+          "pm.test('department has mandatory fields', () => { pm.expect(departments[0]).to.include.all.keys('id', 'name', 'status'); pm.expect(departments[0].status).to.eql('ACTIVE'); });",
+          "pm.environment.set('departmentId', String(departments[0].id));"
+        ]}
+      }]
+    },
+    {
+      "name": "Retrieve employees with pagination",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": "{{baseUrl}}/employees?page=1&pageSize=2&sort=joiningDate&direction=desc"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "pm.test('returns 200', () => pm.response.to.have.status(200));",
+          "const body = pm.response.json();",
+          "pm.test('has required pagination structure', () => { pm.expect(body).to.include.all.keys('items', 'page', 'pageSize', 'totalItems', 'totalPages'); pm.expect(body.items).to.be.an('array'); });",
+          "pm.test('uses requested page settings', () => { pm.expect(body.page).to.eql(1); pm.expect(body.pageSize).to.eql(2); pm.expect(body.items.length).to.be.at.most(2); });"
+        ]}
+      }]
+    },
+    {
+      "name": "Create employee using valid data",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Accept", "value": "application/json" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Newman Test Employee\",\n  \"email\": \"{{uniqueEmail}}\",\n  \"departmentId\": {{departmentId}},\n  \"jobTitle\": \"Quality Engineer\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-15\"\n}"
+        },
+        "url": "{{baseUrl}}/employees"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "pm.test('creates employee', () => pm.response.to.have.status(201));",
+          "const body = pm.response.json();",
+          "pm.test('returns created employee fields', () => { pm.expect(body).to.include.all.keys('id', 'fullName', 'email', 'department', 'jobTitle', 'status', 'joiningDate', 'createdAt', 'updatedAt'); pm.expect(body.email).to.eql(pm.environment.get('uniqueEmail')); pm.expect(body.status).to.eql('ACTIVE'); });",
+          "pm.expect(body.id).to.be.a('number');",
+          "pm.environment.set('employeeId', String(body.id));"
+        ]}
+      }]
+    },
+    {
+      "name": "Search and filter employees",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": "{{baseUrl}}/employees?page=1&pageSize=20&search={{uniqueEmail}}&departmentId={{departmentId}}&status=ACTIVE&sort=fullName&direction=asc"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "pm.test('returns filtered results', () => pm.response.to.have.status(200));",
+          "const body = pm.response.json();",
+          "pm.test('finds the created employee', () => { pm.expect(body.items).to.be.an('array'); pm.expect(body.items.some(employee => String(employee.id) === pm.environment.get('employeeId'))).to.be.true; });"
+        ]}
+      }]
+    },
+    {
+      "name": "Reject missing employee data",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"\"\n}" },
+        "url": "{{baseUrl}}/employees"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "pm.test('rejects invalid payload with 400', () => pm.response.to.have.status(400));",
+          "const body = pm.response.json();",
+          "pm.test('returns validation error structure', () => { pm.expect(body.code).to.eql('VALIDATION_FAILED'); pm.expect(body.errors).to.be.an('array').that.is.not.empty; pm.expect(body).to.include.all.keys('timestamp', 'status', 'code', 'message', 'path', 'errors'); });"
+        ]}
+      }]
+    },
+    {
+      "name": "Reject duplicate employee email",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Duplicate Employee\",\n  \"email\": \"{{uniqueEmail}}\",\n  \"departmentId\": {{departmentId}},\n  \"jobTitle\": \"Engineer\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-15\"\n}"
+        },
+        "url": "{{baseUrl}}/employees"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "pm.test('rejects duplicate email with 409', () => pm.response.to.have.status(409));",
+          "const body = pm.response.json();",
+          "pm.test('returns conflict structure', () => { pm.expect(body.code).to.eql('CONFLICT'); pm.expect(body.message).to.be.a('string').and.not.empty; });"
+        ]}
+      }]
+    },
+    {
+      "name": "Update employee",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Newman Updated Employee\",\n  \"email\": \"{{uniqueEmail}}\",\n  \"departmentId\": {{departmentId}},\n  \"jobTitle\": \"Senior Quality Engineer\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-15\"\n}"
+        },
+        "url": "{{baseUrl}}/employees/{{employeeId}}"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "pm.test('updates employee', () => pm.response.to.have.status(200));",
+          "const body = pm.response.json();",
+          "pm.test('returns updated values', () => { pm.expect(String(body.id)).to.eql(pm.environment.get('employeeId')); pm.expect(body.fullName).to.eql('Newman Updated Employee'); pm.expect(body.jobTitle).to.eql('Senior Quality Engineer'); });"
+        ]}
+      }]
+    },
+    {
+      "name": "Deactivate employee",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": "{{baseUrl}}/employees/{{employeeId}}"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "pm.test('deactivates employee with no response body', () => { pm.response.to.have.status(204); pm.expect(pm.response.text()).to.eql(''); });"
+        ]}
+      }]
+    },
+    {
+      "name": "Verify employee is inactive",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": "{{baseUrl}}/employees/{{employeeId}}"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "pm.test('retains deactivated employee', () => pm.response.to.have.status(200));",
+          "pm.test('employee status is inactive', () => pm.expect(pm.response.json().status).to.eql('INACTIVE'));"
+        ]}
+      }]
+    },
+    {
+      "name": "Handle invalid employee identifier",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Accept", "value": "application/json" }],
+        "url": "{{baseUrl}}/employees/999999999"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "pm.test('returns 404 for missing employee', () => pm.response.to.have.status(404));",
+          "pm.test('returns not-found error code', () => pm.expect(pm.response.json().code).to.eql('RESOURCE_NOT_FOUND'));"
+        ]}
+      }]
+    },
+    {
+      "name": "Handle invalid department identifier",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Missing Department Employee\",\n  \"email\": \"missing.department.{{$timestamp}}@example.com\",\n  \"departmentId\": 999999999,\n  \"jobTitle\": \"Engineer\",\n  \"status\": \"ACTIVE\",\n  \"joiningDate\": \"2024-01-15\"\n}"
+        },
+        "url": "{{baseUrl}}/employees"
+      },
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": [
+          "pm.test('returns 404 for missing department', () => pm.response.to.have.status(404));",
+          "const body = pm.response.json();",
+          "pm.test('identifies missing resource', () => { pm.expect(body.code).to.eql('RESOURCE_NOT_FOUND'); pm.expect(body.message).to.eql('Department not found'); });"
+        ]}
+      }]
+    }
+  ]
+}

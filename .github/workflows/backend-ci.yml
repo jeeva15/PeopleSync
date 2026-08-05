@@ -64,6 +64,14 @@ jobs:
           java-version: "17"
           cache: gradle
 
+      - name: Set up Node.js for Newman
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Newman
+        run: npm install --global newman@6.2.1
+
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
@@ -105,6 +113,14 @@ jobs:
           curl --fail --silent --show-error \
             "http://127.0.0.1:8080/api/v1/employees?page=1&pageSize=20&sort=joiningDate&direction=desc" \
             > build/ci-evidence/employees.json
+
+          newman run postman/people-sync-api.postman_collection.json \
+            --environment postman/people-sync-ci.postman_environment.json \
+            --bail \
+            --color off \
+            --reporters cli,junit,json \
+            --reporter-junit-export build/ci-evidence/newman-results.xml \
+            --reporter-json-export build/ci-evidence/newman-results.json
 
       - name: Upload backend test results and API evidence
         if: always()
