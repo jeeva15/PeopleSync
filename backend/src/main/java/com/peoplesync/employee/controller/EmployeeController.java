@@ -26,8 +26,9 @@ public class EmployeeController {
             @RequestParam(required = false) @Positive Long departmentId,
             @RequestParam(required = false) EmployeeStatus status,
             @RequestParam(defaultValue = "id") String sort,
-            @RequestParam(defaultValue = "asc") Sort.Direction direction) {
-        return service.findAll(page, pageSize, search, departmentId, status, sort, direction);
+            @RequestParam(defaultValue = "asc") @Pattern(regexp = "(?i)asc|desc") String direction) {
+        return service.findAll(page, pageSize, search, departmentId, status, sort,
+                Sort.Direction.fromString(direction));
     }
 
     @GetMapping("/{id}")
