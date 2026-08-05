@@ -1,0 +1,3 @@
+/* Employee form ownership: form sections, controls and action bar. */
+.employee-form { width: 100%; }
+.employee-form .form-label { cursor: pointer; }
