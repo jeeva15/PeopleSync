@@ -61,7 +61,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiError> unexpected(Exception ex, HttpServletRequest request) {
-        log.error("Unhandled request failure path={}", request.getRequestURI(), ex);
+        log.error("Unhandled request failure path={} exceptionType={}",
+                request.getRequestURI(), ex.getClass().getSimpleName());
         return response(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "An unexpected error occurred", request, List.of());
     }
 
