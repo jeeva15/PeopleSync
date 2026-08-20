@@ -5,7 +5,7 @@ COPY gradlew gradlew.bat settings.gradle build.gradle ./
 COPY gradle ./gradle
 RUN chmod 0755 gradlew && ./gradlew --no-daemon dependencies
 
-COPY src ./src
+COPY backend/src ./src
 RUN ./gradlew --no-daemon clean bootJar
 
 FROM eclipse-temurin:17-jre-jammy AS runtime
