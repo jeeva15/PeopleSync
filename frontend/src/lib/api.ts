@@ -6,22 +6,41 @@ import type {
   PageResponse,
 } from "./types";
 
-const API_URL = (import.meta.env.VITE_API_URL || "/api/v1").replace(/\/$/, "");
-const EMPLOYEE_FIELDS = new Set(["fullName", "email", "departmentId", "jobTitle", "status", "joiningDate"]);
+const API_URL = (
+  import.meta.env.VITE_API_URL || "https://peoplesync-nkx8.onrender.com/api/v1"
+).replace(/\/$/, "");
+const EMPLOYEE_FIELDS = new Set([
+  "fullName",
+  "email",
+  "departmentId",
+  "jobTitle",
+  "status",
+  "joiningDate",
+]);
 
 export class ApiRequestError extends Error {
   status: number;
   code: string;
   fieldErrors: Record<string, string>;
   constructor(status: number, error: ApiError) {
-    super(error.message?.slice(0, 500) || "The request could not be completed.");
+    super(
+      error.message?.slice(0, 500) || "The request could not be completed.",
+    );
     this.name = "ApiRequestError";
     this.status = status;
     this.code = error.code ?? "REQUEST_FAILED";
     this.fieldErrors = Object.fromEntries(
       (error.errors ?? [])
-        .filter((item) => item && typeof item.field === "string" && typeof item.message === "string")
-        .map((item) => [item.field.split(".").at(-1) ?? "", item.message.slice(0, 300)])
+        .filter(
+          (item) =>
+            item &&
+            typeof item.field === "string" &&
+            typeof item.message === "string",
+        )
+        .map((item) => [
+          item.field.split(".").at(-1) ?? "",
+          item.message.slice(0, 300),
+        ])
         .filter(([field]) => EMPLOYEE_FIELDS.has(field)),
     );
   }
