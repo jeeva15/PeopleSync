@@ -6,9 +6,7 @@ import type {
   PageResponse,
 } from "./types";
 
-const API_URL = (
-  import.meta.env.VITE_API_URL || "https://peoplesync-nkx8.onrender.com/api/v1"
-).replace(/\/$/, "");
+const API_URL = (import.meta.env.VITE_API_URL || "/api/v1").replace(/\/$/, "");
 const EMPLOYEE_FIELDS = new Set([
   "fullName",
   "email",
