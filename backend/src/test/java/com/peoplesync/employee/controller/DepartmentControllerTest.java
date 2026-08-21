@@ -2,6 +2,7 @@ package com.peoplesync.employee.controller;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -10,14 +11,17 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.peoplesync.employee.config.CorsConfig;
 import com.peoplesync.employee.dto.DepartmentResponse;
 import com.peoplesync.employee.model.DepartmentStatus;
 import com.peoplesync.employee.service.DepartmentService;
 
 @WebMvcTest(DepartmentController.class)
+@Import(CorsConfig.class)
 class DepartmentControllerTest {
     @Autowired MockMvc mvc;
     @MockitoBean DepartmentService service;
@@ -30,5 +34,16 @@ class DepartmentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Engineering"))
                 .andExpect(jsonPath("$[0].status").value("ACTIVE"));
+    }
+
+    @Test void allowsConfiguredProductionFrontendOrigin() throws Exception {
+        when(service.findAll(true)).thenReturn(List.of());
+
+        mvc.perform(get("/api/v1/departments")
+                        .param("activeOnly", "true")
+                        .header("Origin", "https://peoplesync-1.onrender.com"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin",
+                        "https://peoplesync-1.onrender.com"));
     }
 }
